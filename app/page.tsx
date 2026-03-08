@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 const GlobeComponent = dynamic(() => import("../components/GlobeComponent"), { 
@@ -7,113 +7,168 @@ const GlobeComponent = dynamic(() => import("../components/GlobeComponent"), {
   loading: () => <div className="fixed inset-0 bg-[#020617]" /> 
 });
 
-const Typewriter = ({ text }: { text: string }) => {
-  const [displayedText, setDisplayedText] = useState("");
-  useEffect(() => {
-    setDisplayedText(""); 
-    let i = 0;
-    const timer = setInterval(() => {
-      setDisplayedText((prev) => prev + text.charAt(i));
-      i++;
-      if (i >= text.length) clearInterval(timer);
-    }, 5); 
-    return () => clearInterval(timer);
-  }, [text]);
-
-  return <p>{displayedText}</p>;
-};
-
 export default function Home() {
-  const [location, setLocation] = useState("");
-  const [mood, setMood] = useState("");
-  const [budget, setBudget] = useState("");
-  const [response, setResponse] = useState("");
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ from: "", to: "", days: "1", budget: "" });
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (data && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [data]);
 
   const planTrip = async () => {
     setLoading(true);
-    setResponse("");
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ location, mood, budget }),
+        body: JSON.stringify({ 
+          fromLocation: form.from, 
+          toLocation: form.to, 
+          days: form.days, 
+          budget: form.budget 
+        }),
       });
-      const data = await res.json();
-      setResponse(data.text);
-    } catch (error) {
-      setResponse("Network issue detected. Systems offline.");
+      setData(await res.json());
+    } catch (e) { 
+      console.error(e); 
     }
     setLoading(false);
   };
 
   return (
-    <main className="relative min-h-screen bg-transparent text-white flex flex-col items-center justify-start py-12 px-4 overflow-x-hidden">
-      <GlobeComponent />
-
-      <div className="relative z-10 w-full max-w-2xl space-y-8">
-        <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-extrabold py-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-emerald-200">
-            TravelBuddy AI
-          </h1>
-          <p className="mt-2 text-emerald-100 opacity-60 font-medium tracking-[0.3em] uppercase text-xs">
-            Destination tumhara, plan humara
-          </p>
+    <div className="flex flex-col min-h-screen text-white bg-black font-sans relative">
+      <div className="fixed inset-0 z-0">
+        <GlobeComponent />
+      </div>
+      
+      <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-6 py-4 bg-black/20 backdrop-blur-lg border-b border-white/10">
+        <div className="w-10 flex flex-col gap-1.5 cursor-pointer">
+          <span className="w-6 h-0.5 bg-white"></span>
+          <span className="w-6 h-0.5 bg-white"></span>
+          <span className="w-6 h-0.5 bg-white"></span>
         </div>
+        <h1 className="text-xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-emerald-200">
+          TravelBuddy AI
+        </h1>
+        <div className="w-10"></div>
+      </nav>
 
-        <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="relative z-10 w-full max-w-xl mx-auto mt-32 px-6 pb-20 space-y-12">
+        {/* Input Form Card */}
+        <div className="bg-white/5 backdrop-blur-3xl p-8 rounded-[2.5rem] border border-white/10 space-y-6 shadow-2xl">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs text-emerald-200 uppercase tracking-widest font-bold ml-1">Location</label>
-              <input
-                type="text"
-                placeholder="Where to?"
-                className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:ring-1 focus:ring-emerald-400/30 transition-all text-sm"
-                onChange={(e) => setLocation(e.target.value)}
+              <label className="text-[10px] uppercase tracking-widest font-bold text-emerald-400/60 ml-1">From</label>
+              <input 
+                type="text" 
+                placeholder="Starting City" 
+                className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm focus:outline-none focus:border-emerald-500/50" 
+                onChange={(e)=>setForm({...form, from: e.target.value})} 
               />
             </div>
-
             <div className="space-y-2">
-              <label className="text-xs text-emerald-200 uppercase tracking-widest font-bold ml-1">Vibe</label>
-              <input
-                type="text"
-                placeholder="How are you feeling?"
-                className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:ring-1 focus:ring-emerald-400/30 transition-all text-sm"
-                onChange={(e) => setMood(e.target.value)}
+              <label className="text-[10px] uppercase tracking-widest font-bold text-emerald-400/60 ml-1">Destination</label>
+              <input 
+                type="text" 
+                placeholder="To City" 
+                className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm focus:outline-none focus:border-emerald-500/50" 
+                onChange={(e)=>setForm({...form, to: e.target.value})} 
               />
             </div>
           </div>
-
-          <div className="space-y-2">
-            <label className="text-xs text-emerald-200 uppercase tracking-widest font-bold ml-1">Budget (INR)</label>
-            <input
-              type="number"
-              placeholder="Enter amount"
-              className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:outline-none focus:ring-1 focus:ring-emerald-400/30 transition-all text-sm"
-              onChange={(e) => setBudget(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-widest font-bold text-emerald-400/60 ml-1">Days</label>
+              <input 
+                type="number" 
+                placeholder="Duration" 
+                className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm focus:outline-none focus:border-emerald-500/50" 
+                onChange={(e)=>setForm({...form, days: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-widest font-bold text-emerald-400/60 ml-1">Budget</label>
+              <input 
+                type="number" 
+                placeholder="Amount in INR" 
+                className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm focus:outline-none focus:border-emerald-500/50" 
+                onChange={(e)=>setForm({...form, budget: e.target.value})} 
+              />
+            </div>
           </div>
-          
-          <button
-            onClick={planTrip}
-            disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white p-5 rounded-2xl font-bold uppercase tracking-widest text-sm shadow-xl shadow-emerald-500/20 active:scale-95 transition-all disabled:opacity-50 mt-4"
+          <button 
+            onClick={planTrip} 
+            disabled={loading} 
+            className="w-full bg-emerald-600 hover:bg-emerald-500 p-5 rounded-2xl font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
           >
-            {loading ? "Calculating..." : "Generate Travel Plan"}
+            {loading ? "Planning..." : "Get Plan"}
           </button>
         </div>
 
-        {response && (
-          <div className="bg-black/40 backdrop-blur-md border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <h2 className="text-emerald-300 font-bold mb-4 text-xs tracking-[0.2em] uppercase flex items-center gap-2">
-               <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-               Analysis Result:
-            </h2>
-            <div className="text-white/90 text-sm md:text-base leading-relaxed whitespace-pre-wrap border-t border-white/10 pt-6">
-              <Typewriter text={response} />
+        {/* Result Card with Identical Glassmorphism */}
+        {data && (
+          <div ref={resultRef} className="bg-white/5 backdrop-blur-3xl p-8 md:p-10 rounded-[2.5rem] border border-white/10 space-y-12 shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-1000">
+            <p className="text-center text-white/50 italic text-lg leading-relaxed px-4">
+              "{data.intro}"
+            </p>
+            
+            <div className="space-y-16">
+              {data.places.map((place: any, i: number) => (
+                <div key={i} className="space-y-4">
+                  <div>
+                    <h3 className="text-2xl font-semibold tracking-tight text-emerald-50">
+                      {i + 1}. {place.name}
+                    </h3>
+                    <a 
+                      href={place.mapUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                    >
+                      <img 
+                        src="https://www.google.com/images/branding/product/2x/maps_96dp.png" 
+                        alt="Map" 
+                        className="w-4 h-4" 
+                      />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">View on Maps</span>
+                    </a>
+                  </div>
+                  <p className="text-white/60 leading-relaxed text-sm">
+                    {place.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-10 border-t border-white/10 space-y-8">
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-500/60">Local Recommendation</p>
+                <p className="text-lg font-medium">{data.food}</p>
+              </div>
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-500/60">Budget Calculation</p>
+                <ul className="text-sm text-white/40 space-y-3 list-disc pl-4">
+                  {data.budgetDetails.map((item: any, i: number) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+                <div className="mt-6 pt-4 border-t border-white/5">
+                  <p className="text-emerald-400 font-bold text-lg">
+                    Total Estimated Expense: {data.totalBudget || `within ₹${form.budget}`}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
-    </main>
+
+      <footer className="relative z-10 w-full py-10 text-center text-[10px] text-white/20 uppercase tracking-[0.4em] border-t border-white/5 mt-auto">
+        Build by-Sujoy Dey • insta-@mr.sujoydey
+      </footer>
+    </div>
   );
 }

@@ -1,28 +1,41 @@
 import Groq from "groq-sdk";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: Request) {
   try {
-    const { mood, budget, location } = await req.json();
-
+    const { fromLocation, toLocation, days, budget } = await req.json();
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
+          role: "system",
+          content: `You are a travel expert. Output ONLY a valid JSON object.
+          Rules:
+          1. Use English only and a fun tone. 
+          2. Plan for the destination: ${toLocation}.
+          3. Provide between 3 to 5 best places to visit (aim for 5 if the budget allows).
+          4. Format:
+          {
+            "intro": "Exciting intro...",
+            "places": [
+              { "name": "Place Name", "desc": "50-word description", "mapUrl": "Google Maps URL" }
+            ],
+            "food": "Local dish",
+            "budgetDetails": ["Item 1", "Item 2"],
+            "totalBudget": "₹Total Amount"
+          }`
+        },
+        {
           role: "user",
-          content: `You are a spontaneous travel buddy. Plan a 1-day trip in ${location} for someone who is feeling ${mood} with a budget of ₹${budget}. Give 3 specific spots and one local food suggestion. Keep it friendly and Desi style.`,
+          content: `Plan a ${days}-day trip to ${toLocation} from ${fromLocation} with ₹${budget}.`,
         },
       ],
-      model: "llama-3.3-70b-versatile", // Ye model bohot fast hai aur free tier mein chalta hai
+      model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" }
     });
 
-    const text = chatCompletion.choices[0]?.message?.content || "";
-
-    return new Response(JSON.stringify({ text: text }));
+    return new Response(chatCompletion.choices[0]?.message?.content);
   } catch (error: any) {
-    console.error("Groq Error:", error);
-    return new Response(JSON.stringify({ text: "Bhai, Groq bhi gussa hai: " + error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }
